@@ -1,0 +1,5 @@
+repserver:REPS_12
+user:sa
+password:
+dataserver:bdulfer_110902
+database:pubs2
