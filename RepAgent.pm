@@ -11,7 +11,7 @@ Sybase::RepAgent - Perl extension for building a Sybase Replication Agent which 
   use Sybase::RepAgent;
   my $ra = Sybase::RepAgent->new($repserver, 
                                  $user, 
-                                 $password, 
+                                 password, 
                                  $dataserver, 
                                  $database, 
                                  $ltl_version);
@@ -46,6 +46,8 @@ Or you can use it to feed data into RepServer, which will do the distribution, e
 
 For setting up and using a replication with Sybase::RepAgent see the RepAgent cookbook (cookbook.pm).
 
+This is my own work. Sybase Inc. is in no way involved and does NOT support this module.
+
 =cut
 
 #-------------------------------------------------------------------------------------------------------------------
@@ -63,7 +65,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw( );
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use DBI;
 
@@ -123,21 +125,21 @@ The constructor returns a RepAgent-object if the connect to the RepServer succee
 =cut - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 sub new {
-	my $that = shift;
-	my $class = ref($that) || $that;
+  my $that = shift;
+  my $class = ref($that) || $that;
+  
+  my $self = {
+               REPSERVER => $_[0],
+               USER => $_[1],
+               PASSWORD => $_[2],
+               SOURCE_DS => $_[3],
+               SOURCE_DB => $_[4],
+               LTL_VERSION => $_[5] || 200
+             };
 
-	my $self = {
-							REPSERVER => $_[0],
-							USER => $_[1],
-							PASSWORD => $_[2],
-							SOURCE_DS => $_[3],
-							SOURCE_DB => $_[4],
-							LTL_VERSION => $_[5] || 200
-						 };
+  bless $self, $class;
 
-	bless $self, $class;
-
-	return $self->_connect();
+  return $self->_connect();
 }
 
 #-------------------------------------------------------------------------------------------------------------------
@@ -913,13 +915,13 @@ __END__
 
 =head1 AUTHOR
 
-Bernd Dulfer <bdulfer@sybase.com>
+Bernd Dulfer <bdulfer@cpan.org>
 
 =head1 SEE ALSO
 
- L<perl>.
- L<DBI>.
- L<DBD::Sybase>.
+ Perl
+ DBI
+ DBD::Sybase
  Replication Server Design Guide (Sybase web site)
 
 =cut

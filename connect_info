@@ -1,4 +1,4 @@
-repserver:REPS_12
+repserver:myserver
 user:sa
 password:
 dataserver:bdulfer_110902

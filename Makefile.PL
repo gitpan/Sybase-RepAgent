@@ -4,8 +4,8 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
     'NAME'		=> 'Sybase::RepAgent',
     'VERSION_FROM'	=> 'RepAgent.pm', # finds $VERSION
-    'PREREQ_PM'		=> {}, # e.g., Module::Name => 1.1
+    'PREREQ_PM'		=> {DBI => 1.1, DBD::Sybase => 0.91}, # e.g., Module::Name => 1.1
     ($] >= 5.005 ?    ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM => 'RepAgent.pm', # retrieve abstract from module
-       AUTHOR     => 'Bernd Dulfer <bdulfer@sybase.com>') : ()),
+       AUTHOR     => 'Bernd Dulfer <bdulfer@cpan.org>') : ()),
 );

@@ -1,5 +1,8 @@
 Revision history for Perl extension Sybase::RepAgent.
 
+0.02  Wed Sep 26 2001
+  - minor bugfixes
+
 0.01  Fri Aug 24 12:19:16 2001
 	- original version; created by h2xs 1.21 with options
 		-A -X -n Sybase::RepAgent
