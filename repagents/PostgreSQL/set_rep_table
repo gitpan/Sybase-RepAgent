@@ -1,0 +1,77 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+use Data::Dumper;
+
+use DBI;
+use Getopt::Long;
+
+our %type = (int2    => 'num',
+             int4    => 'num',
+             int8    => 'num',
+             numeric => 'num',
+             bpchar  => 'char',
+             varchar => 'char',
+            );
+our %attrs;
+
+my ($db, $user, $pass, $table, $mode);
+GetOptions('d|Database=s'   => \$db,
+           'u|User=s'       => \$user,
+           'p|Password=s'   => \$pass,
+           't|Table=s'      => \$table,
+           'm|Replicate=s'  => \$mode);
+
+my $dbh = DBI->connect("dbi:Pg(RaiseError=1):dbname=$db", $user, $pass);
+
+if ($mode eq 'false') {
+  $dbh->do("drop rule rs_insert_$table");
+  $dbh->do("drop rule rs_update_$table");
+  $dbh->do("drop rule rs_delete_$table");
+} else {
+  %attrs = map { ($_->{NAME} => [$_->{TYPE}, $_->{SIZE}]) } @{$dbh->func($table, 'table_attributes')};
+
+  my $table_id = ${$dbh->selectall_arrayref("select relfilenode from pg_class where relname='$table'")}[0][0];
+
+  my $cols = $dbh->selectall_arrayref("select attname,atttypid,atttypmod from pg_attribute where attrelid = $table_id and attnum > 0 order by attnum");
+
+  our @col_names = map {push @{$attrs{$_->[0]}}, $_->[1], $_->[2]; $_->[0]} @{$cols};
+
+  my $insert = "create rule rs_insert_$table as on insert to $table do insert into rs_commands (tbl, ins, del) values('$table'," .
+               join(" || ',' ||", map { "'" . '@' . "$_=' || " . prepare_mask($_, 'NEW') } (@col_names)) . 
+               ', null)';
+  $dbh->do($insert);
+
+  my $update = "create rule rs_update_$table as on update to $table do insert into rs_commands (tbl, ins, del) values('$table', " .
+               join(" || ',' ||", map { "'" . '@' . "$_=' || " . prepare_mask($_, 'NEW') } (@col_names)) . 
+               ', ' . join(" || ',' ||", map { "'" . '@' . "$_=' || " . prepare_mask($_, 'OLD') } (@col_names)) . 
+               ')';
+  $dbh->do($update);
+
+  my $delete = "create rule rs_delete_$table as on delete to $table do insert into rs_commands (tbl, ins, del) values('$table', " .
+               'null, ' . join(" || ',' ||", map { "'" . '@' . "$_=' || " . prepare_mask($_, 'OLD') } (@col_names)) . 
+               ')';
+  $dbh->do($delete);
+}
+
+$dbh->disconnect;
+
+#-------------------------------------------------------------------------------------------------------
+sub prepare_mask {
+  my ($col_name, $newold) = @_;
+
+  if ($type{$attrs{$col_name}->[0]} eq 'num') {
+    if ($attrs{$col_name}->[0] eq 'numeric') {
+      my $typmod = pack('L', $attrs{$col_name}->[3]);
+      my ($prec, $size) = unpack('S S', $typmod);
+      $prec -= 4;
+      return "trim(from to_char($newold.$col_name, '" . '9' x ($size - $prec) . '.' . '9' x $prec . "'))";
+    } else {
+      my $size = length(256**$attrs{$col_name}->[1]);
+      return "trim(from to_char($newold.$col_name, '" . '9' x $size . "'))";
+    }
+  } else {
+    return "'''' || $newold.$col_name || ''''";
+  }
+}

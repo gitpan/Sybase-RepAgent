@@ -6,3 +6,7 @@ RepAgent.pm
 test.pl
 cookbook.pm
 connect_info
+repagents/PostgreSQL/RepAgent_PostgreSQL
+repagents/PostgreSQL/enable_replication
+repagents/PostgreSQL/disable_replication
+repagents/PostgreSQL/set_rep_table

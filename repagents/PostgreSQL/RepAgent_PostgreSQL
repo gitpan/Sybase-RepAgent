@@ -1,0 +1,63 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+use Data::Dumper;
+
+use DBI;
+use Sybase::RepAgent;
+use Getopt::Long;
+
+my ($db, $user, $pass, $repserver, $repuser, $reppass, $sleep);
+Getopt::Long::Configure('no_ignore_case');
+GetOptions('d|Database=s'    => \$db,
+           'u|User=s'        => \$user,
+           'p|Password=s'    => \$pass,
+           'r|RepServer=s'   => \$repserver,
+           'U|RepUser=s'     => \$repuser,
+           'P|RepPassword=s' => \$reppass,
+           's|sleep=i'       => \$sleep,
+          );
+
+$sleep ||= 5;
+
+my $dbh = DBI->connect("dbi:Pg(RaiseError=1):dbname=$db", $user, $pass);
+
+my $ra = Sybase::RepAgent->new($repserver, $repuser, $reppass, 'PostgreSQL', $db);
+
+print $ra->maintenance_user;
+$ra->truncation_pointer;
+$ra->ltl_version;
+$ra->system_version;
+$ra->upgrade_locator;
+  
+my ($gen_id) = $dbh->selectrow_array('select genid from rs_control') || (0);
+
+while (1) {
+  my $sth = $dbh->prepare('select id, tbl, ins, del from rs_commands');
+  $sth->execute;
+
+  while (my @row = $sth->fetchrow_array) {
+    if (!defined $row[2]) {                     # no insert data -> delete
+      $ra->begin_tran({gen_id => $gen_id});
+      $ra->delete({gen_id => $gen_id}, $row[1], qq{$row[3]});
+      $ra->commit_tran({gen_id => $gen_id});
+    } elsif (!defined $row[3]) {                # no delete data -> insert
+      $ra->begin_tran({gen_id => $gen_id});
+      $ra->insert({gen_id => $gen_id}, $row[1], qq{$row[2]});
+      if ($ra->commit_tran({gen_id => $gen_id})) {
+        $dbh->do("delete from rs_commands where id = $row[0]");
+      }
+    } else {
+      $ra->begin_tran({gen_id => $gen_id});
+      $ra->update({gen_id => $gen_id}, $row[1], qq{$row[2]}, qq{$row[3]});
+      $ra->commit_tran({gen_id => $gen_id});
+    }
+  }
+
+  $sth->finish;
+
+  sleep 5;
+}
+
+$dbh->disconnect;

@@ -1,0 +1,31 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+use Data::Dumper;
+
+use DBI;
+use Getopt::Long;
+
+my ($db, $user, $pass, $pwd);
+Getopt::Long::Configure('no_ignore_case');
+GetOptions('d|Database=s'   => \$db,
+           'u|User=s'       => \$user,
+           'p|Password=s'   => \$pass,
+           'P|rs_user_pwd'  => \$pwd,
+          );
+
+my $dbh = DBI->connect("dbi:Pg(RaiseError=1):dbname=$db", $user, $pass);
+
+$dbh->do("create table rs_commands (id serial, tbl varchar(100), ins varchar(10000), del varchar(10000))");
+$dbh->do("create table rs_control (genid int)");
+
+$dbh->do("create user rs_user with password '$pwd'");
+
+$dbh->do("grant insert on rs_commands to public");
+$dbh->do("grant all on rs_commands to rs_user");
+$dbh->do("grant all on rs_commands_id_seq to public");
+$dbh->do("grant all on rs_control to rs_user");
+$dbh->do("insert into rs_control values(0)");
+
+$dbh->disconnect;

@@ -20,6 +20,11 @@ This module requires these other modules and libraries:
   DBI
 	DBD::Sybase
 
+REPLICATION AGENTS
+
+The directory repagents will accumulate RepAgents for several RDBMS over time.
+At the time, there is only one for PostgreSQL and even that is 'work in progress' (read VERY alpha :-).
+
 COPYRIGHT AND LICENCE
 
 This module is free software; you can redistribute it and/or modify

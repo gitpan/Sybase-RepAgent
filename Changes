@@ -1,5 +1,9 @@
 Revision history for Perl extension Sybase::RepAgent.
 
+0.03  Thu Oct 18 2001
+  - one major bugfix
+  - Replication Agent for PostgreSQL (working, but very beta)
+
 0.02  Wed Sep 26 2001
   - minor bugfixes
 

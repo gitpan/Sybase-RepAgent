@@ -49,7 +49,7 @@ ok($ra->system_version);
 ok($ra->upgrade_locator);
 
 ok($ra->begin_tran);
-ok($ra->insert({}, 't1', q{@f1=12, @f2='foo'}));
+ok($ra->insert({}, 't1', q{@f1=1,@f2='Q         ',@f3='W',@f4=12.000}));
 ok($ra->update({}, 't1', q{@f1=12, @f2='foo'}, q{@f1=8, @f2='bar'}));
 ok($ra->commit_tran);
 

@@ -65,7 +65,7 @@ our %EXPORT_TAGS = ( 'all' => [ qw( ) ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw( );
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use DBI;
 
@@ -433,8 +433,10 @@ sub distribute {
 # 	$self->_otime($cmd_tags);
 	$self->_oqid($cmd_tags,$cmd);
 	$self->_tran_id($cmd_tags, $cmd);
+print "RA:$cmd:\n";
 
 	my $tags = join ', ', map {"\@$_=$cmd_tags->{$_}"} keys %$cmd_tags;
+print "RA:$tags:\n";
 	my $res = $self->{DBH}->do("distribute $tags $cmd");
 
 	my $sth = $self->{DBH}->prepare("get truncation $self->{SOURCE_DS}.$self->{SOURCE_DB}");
@@ -443,6 +445,7 @@ sub distribute {
 	$sth->execute or return undef;
 
 	$self->{TRUNCATION_POINTER} = $sth->fetchrow_array;	
+	while ($sth->fetchrow_array) { }
 	$sth->finish;
 	if (substr($self->{TRUNCATION_POINTER},0,64) ne substr($cmd_tags->{origin_qid},2,64)) {
 		if ($cmd =~ /commit|rollback/) {
@@ -450,9 +453,10 @@ sub distribute {
 				select(undef, undef, undef, 0.1);         # have to wait max 10s after commit, repserver will report wrong oqid otherwise
 				$sth->execute or return undef;
 
+				$self->{TRUNCATION_POINTER} = $sth->fetchrow_array;	
+				while ($sth->fetchrow_array) { }
+				$sth->finish;
 				if (substr($self->{TRUNCATION_POINTER},0,64) eq substr($cmd_tags->{origin_qid},2,64)) {
-					$self->{TRUNCATION_POINTER} = $sth->fetchrow_array;	
-					$sth->finish;
 					last;
 				}
 			}
@@ -462,7 +466,7 @@ sub distribute {
 		}
 	}
 
-	return $res;
+	return 1;
 }
 
 #-------------------------------------------------------------------------------------------------------------------
@@ -874,7 +878,12 @@ sub _oqid {
 	if (! exists $cmd_tags->{origin_qid}) {
 		$self->{LAST_ORIGIN_QID} = substr($self->{TRUNCATION_POINTER}, 0, 64);
 		$self->{LAST_ORIGIN_QID}++;
-		$cmd_tags->{origin_qid} = sprintf('0x%064d', $self->{LAST_ORIGIN_QID});
+		if (exists $cmd_tags->{gen_id}) {
+			$cmd_tags->{origin_qid} = sprintf('0x%04d%060d', $cmd_tags->{gen_id}, substr($self->{LAST_ORIGIN_QID}, 4, 60));
+			delete $cmd_tags->{gen_id};
+		} else {
+			$cmd_tags->{origin_qid} = sprintf('0x%064d', $self->{LAST_ORIGIN_QID});
+		}
 	}
 	$self->{LAST_ORIGIN_QID} = $cmd_tags->{origin_qid};
 }

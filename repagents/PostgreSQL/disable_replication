@@ -1,0 +1,27 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+use Data::Dumper;
+
+use DBI;
+use Getopt::Long;
+
+my ($db, $user, $pass);
+Getopt::Long::Configure('no_ignore_case');
+GetOptions('d|Database=s'   => \$db,
+           'u|User=s'       => \$user,
+           'p|Password=s'   => \$pass,
+           );
+
+my $dbh = DBI->connect("dbi:Pg(RaiseError=1):dbname=$db", $user, $pass);
+
+my $rules = $dbh->selectall_arrayref("select rulename from pg_rules where rulename like 'rs_%'");
+my $sql = 'drop rule ' . join ',', map { $_->[0] } @$rules;
+$dbh->do($sql) if $rules->[0];
+$dbh->do('drop table rs_commands');
+$dbh->do('drop table rs_control');
+$dbh->do('drop sequence rs_commands_id_seq');
+$dbh->do('drop user rs_user');
+
+$dbh->disconnect;
